@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Website</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        nav ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        nav ul li {
+            display: inline;
+            margin-right: 10px;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+        }
+
+        main {
+            padding: 20px;
+            text-align: center;
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+
+        .dot {
+            height: 10px;
+            width: 10px;
+            background-color: red;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#" onclick="loadPage('home')">Home</a></li>
+                <li><a href="#" onclick="loadPage('live_traffic')">Live Traffic</a></li>
+                <li><a href="#" onclick="loadPage('metar')">METAR</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main id="content">
+        <!-- Content will be loaded here -->
+    </main>
+    <footer>
+        <p>&copy; 2024 Your Website. All rights reserved.</p>
+    </footer>
+    <script>
+        function loadPage(page) {
+            let content = '';
+
+            if (page === 'home') {
+                content = `
+                    <h1>Welcome to the Home Page</h1>
+                    <p>This is the home page of your website. Use the navigation bar to explore other pages.</p>
+                `;
+            } else if (page === 'live_traffic') {
+                content = `
+                    <h1>Live Traffic Information</h1>
+                    <div id="map"></div>
+                `;
+                setTimeout(loadMap, 100); // Ensure the map div is rendered before initializing the map
+            } else if (page === 'metar') {
+                content = `
+                    <h1>Get METAR Information</h1>
+                    <p>Enter Airport ICAO code:</p>
+                    <input type="text" id="icao" placeholder="e.g., cyyz or CYYZ" onkeydown="checkEnter(event)">
+                    <button onclick="getMetar()">Fetch</button>
+                    <div id="metar-info"></div>
+                `;
+            }
+
+            document.getElementById('content').innerHTML = content;
+
+            if (page === 'metar') {
+                document.getElementById('icao').addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        getMetar();
+                    }
+                });
+            }
+        }
+
+        async function getMetar() {
+            const icao = document.getElementById('icao').value.trim().toUpperCase();
+            const url = `https://metar.vatsim.net/${icao}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const textData = await response.text();
+                if (textData.startsWith("No METAR data")) {
+                    document.getElementById('metar-info').innerHTML = 'No METAR Information Available for the requested airport';
+                } else {
+                    displayMetar(textData);
+                }
+            } catch (error) {
+                console.error('Error fetching METAR data:', error);
+                document.getElementById('metar-info').innerHTML = 'Error fetching data. Please try again.';
+            }
+        }
+
+        function displayMetar(data) {
+            const metarInfoDiv = document.getElementById('metar-info');
+            metarInfoDiv.innerHTML = `<p>${data}</p>`;
+        }
+
+        async function loadMap() {
+            const map = L.map('map').setView([51.505, -0.09], 2);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Add boundary layer
+            const boundariesUrl = 'https://raw.githubusercontent.com/vatsimnetwork/vatspy-data-project/master/Boundaries.geojson';
+            fetch(boundariesUrl)
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJSON(data).addTo(map);
+                })
+                .catch(error => {
+                    console.error('Error fetching boundaries data:', error);
+                });
+
+            const dataUrl = 'https://data.vatsim.net/v3/vatsim-data.json';
+            try {
+                const response = await fetch(dataUrl);
+                const data = await response.json();
+                const pilots = data.pilots;
+
+                pilots.forEach(pilot => {
+                    const lat = pilot.latitude;
+                    const lon = pilot.longitude;
+                    const departure = pilot.flight_plan?.departure || 'Unknown';
+                    const arrival = pilot.flight_plan?.arrival || 'Unknown';
+                    const callsign = pilot.callsign || 'Unknown';
+                    const aircraft = pilot.flight_plan?.aircraft || 'Unknown';
+                    const altitude = pilot.altitude || 'Unknown';
+                    const groundspeed = pilot.groundspeed || 'Unknown';
+
+                    const icon = L.divIcon({
+                        className: 'dot'
+                    });
+
+                    const marker = L.marker([lat, lon], { icon }).addTo(map);
+                    marker.bindPopup(`
+                        <b>Callsign:</b> ${callsign}<br>
+                        <b>Aircraft:</b> ${aircraft}<br>
+                        <b>Departure:</b> ${departure}<br>
+                        <b>Arrival:</b> ${arrival}<br>
+                        <b>Altitude:</b> ${altitude} ft<br>
+                        <b>Groundspeed:</b> ${groundspeed} kts
+                    `);
+                });
+            } catch (error) {
+                console.error('Error fetching live traffic data:', error);
+            }
+        }
+
+        // Load the home page by default
+        loadPage('home');
+    </script>
+</body>
+</html>
