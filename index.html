@@ -99,7 +99,6 @@
                 setTimeout(loadMap, 100); // Ensure the map div is rendered before initializing the map
             } else if (page === 'metar') {
                 content = `
-                    <h1>Get METAR Information</h1>
                     <p>Enter Airport ICAO code:</p>
                     <input type="text" id="icao" placeholder="e.g., cyyz or CYYZ" onkeydown="checkEnter(event)">
                     <button onclick="getMetar()">Fetch</button>
