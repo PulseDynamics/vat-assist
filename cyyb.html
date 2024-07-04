@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METAR Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .metar-data {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .metar-data h2 {
+            text-align: center;
+        }
+        .metar-data p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="metar-data">
+    <h2>METAR Data for CYYB</h2>
+    <div id="metar"></div>
+</div>
+
+<script>
+    async function fetchMetarData() {
+        const response = await fetch('https://aviationweather.gov/api/data/metar?ids=CYYB&format=json&taf=true');
+        const data = await response.json();
+
+        const metarElement = document.getElementById('metar');
+        const metarData = data.data[0];
+
+        metarElement.innerHTML = `
+            <p><strong>Raw METAR:</strong> ${metarData.raw_text}</p>
+            <p><strong>Station ID:</strong> ${metarData.station_id}</p>
+            <p><strong>Observation Time:</strong> ${metarData.observation_time}</p>
+            <p><strong>Temperature:</strong> ${metarData.temp_c} °C</p>
+            <p><strong>Dew Point:</strong> ${metarData.dewpoint_c} °C</p>
+            <p><strong>Wind Speed:</strong> ${metarData.wind_speed_kt} knots</p>
+            <p><strong>Visibility:</strong> ${metarData.visibility_statute_mi} miles</p>
+            <p><strong>Altimeter:</strong> ${metarData.altim_in_hg} inHg</p>
+        `;
+    }
+
+    fetchMetarData();
+</script>
+
+</body>
+</html>
